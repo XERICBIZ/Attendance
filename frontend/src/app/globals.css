@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --color-neo-yellow: #F4C443;
+  --color-neo-green: #1B9C73;
+  --color-neo-orange: #EFA045;
+  --color-neo-red: #ED6A5A;
+  --color-neo-blue: #3772FF;
+}
+
+@layer base {
+  :root {
+    --bg-color: #F7F5EE;
+    --text-color: #1a1a1a;
+    --border-color: #1a1a1a;
+  }
+  
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  /* Neobrutalist Card Component */
+  .neo-card {
+    @apply bg-white border-2 border-[#1a1a1a] rounded-2xl shadow-[4px_4px_0px_0px_#1a1a1a] transition-transform duration-200;
+  }
+  
+  .neo-card:hover {
+    @apply -translate-y-1 shadow-[6px_6px_0px_0px_#1a1a1a];
+  }
+
+  /* Neobrutalist Button */
+  .neo-button {
+    @apply font-bold border-2 border-[#1a1a1a] rounded-full shadow-[3px_3px_0px_0px_#1a1a1a] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all;
+  }
+
+  /* Neobrutalist Input */
+  .neo-input {
+    @apply w-full px-4 py-3 bg-white border-2 border-[#1a1a1a] rounded-xl focus:outline-none focus:ring-0 focus:shadow-[4px_4px_0px_0px_#1a1a1a] transition-shadow;
+  }
+}
+
+/* Custom Colors as utility classes to maintain compatibility with the previous code */
+.bg-neo-yellow { background-color: #F4C443; }
+.bg-neo-green { background-color: #1B9C73; color: white; }
+.bg-neo-orange { background-color: #EFA045; }
+.bg-neo-red { background-color: #ED6A5A; color: white; }
+.bg-neo-blue { background-color: #3772FF; color: white; }
+.text-neo-red { color: #ED6A5A; }
+.text-neo-green { color: #1B9C73; }
