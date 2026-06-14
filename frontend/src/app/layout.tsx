@@ -9,8 +9,15 @@ export const metadata: Metadata = {
   title: "AttendX - Smart Attendance Tracker",
   description: "Track your college attendance with smart analytics and offline support",
   manifest: "/manifest.json",
+};
+
+export const viewport = {
   themeColor: "#4f46e5",
-  viewport: "minimum-scale=1, initial-scale=1, width=device-width, shrink-to-fit=no, viewport-fit=cover",
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  viewportFit: "cover",
+  // shrink-to-fit=no is default behavior now
 };
 
 export default function RootLayout({
