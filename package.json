@@ -1,0 +1,15 @@
+{
+  "name": "attendancetracker",
+  "version": "1.0.0",
+  "description": "Attendance Tracker PWA",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=frontend & npm run dev --workspace=backend",
+    "build": "npm run build --workspaces",
+    "start": "npm run start --workspace=frontend & npm run start --workspace=backend"
+  }
+}
