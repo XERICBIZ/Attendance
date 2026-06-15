@@ -78,10 +78,63 @@ export async function offlineFirstMutation(
   return { success: true, offline: true, data: localData };
 }
 
+// Fetch all data from the backend and populate Dexie
+export async function hydrateFromServer() {
+  if (!navigator.onLine) return;
+
+  try {
+    const [subjectsRes, attendanceRes, timetableRes] = await Promise.all([
+      fetchWithAuth('/subjects').catch(() => ({ subjects: [] })),
+      fetchWithAuth('/attendance').catch(() => ({ attendance: [] })),
+      fetchWithAuth('/timetable').catch(() => ({ timetable: [] })),
+    ]);
+
+    const userId = useAppStore.getState().user?.id;
+    if (!userId) return;
+
+    // Clear old local data for this user and replace with server data
+    const oldSubjects = await db.subjects.where('userId').equals(userId).toArray();
+    await Promise.all(oldSubjects.map(s => db.subjects.delete(s.id)));
+    const oldAttendance = await db.attendance.where('userId').equals(userId).toArray();
+    await Promise.all(oldAttendance.map(a => db.attendance.delete(a.id)));
+    const oldTimetable = await db.timetable.where('userId').equals(userId).toArray();
+    await Promise.all(oldTimetable.map(t => db.timetable.delete(t.id)));
+
+    // Populate Dexie with server data
+    for (const subject of subjectsRes.subjects || []) {
+      await db.subjects.put({ ...subject, userId });
+    }
+    for (const att of attendanceRes.attendance || []) {
+      await db.attendance.put({ ...att, userId });
+    }
+    for (const entry of timetableRes.timetable || []) {
+      await db.timetable.put({ ...entry, userId });
+    }
+
+    console.log('Hydrated local DB from server');
+  } catch (error) {
+    console.warn('Failed to hydrate from server:', error);
+  }
+}
+
 export const api = {
   getSubjects: async () => {
     const userId = useAppStore.getState().user?.id || 'offline-user';
-    const subjects = await db.subjects.where('userId').equals(userId).toArray();
+    let subjects = await db.subjects.where('userId').equals(userId).toArray();
+
+    // If local DB is empty and online, try fetching from server
+    if (subjects.length === 0 && navigator.onLine && userId !== 'offline-user') {
+      try {
+        const serverData = await fetchWithAuth('/subjects');
+        for (const sub of serverData.subjects || []) {
+          await db.subjects.put({ ...sub, userId });
+        }
+        subjects = await db.subjects.where('userId').equals(userId).toArray();
+      } catch (e) {
+        console.warn('Failed to fetch subjects from server:', e);
+      }
+    }
+
     // Also attach attendance to subjects so the UI calculations work
     for (const sub of subjects) {
       const attendance = await db.attendance.where('subjectId').equals(sub.id).toArray();
@@ -95,14 +148,38 @@ export const api = {
   
   getAttendance: async () => {
     const userId = useAppStore.getState().user?.id || 'offline-user';
-    const attendance = await db.attendance.where('userId').equals(userId).toArray();
+    let attendance = await db.attendance.where('userId').equals(userId).toArray();
+
+    if (attendance.length === 0 && navigator.onLine && userId !== 'offline-user') {
+      try {
+        const serverData = await fetchWithAuth('/attendance');
+        for (const att of serverData.attendance || []) {
+          await db.attendance.put({ ...att, userId });
+        }
+        attendance = await db.attendance.where('userId').equals(userId).toArray();
+      } catch (e) {
+        console.warn('Failed to fetch attendance from server:', e);
+      }
+    }
     return { attendance };
   },
   markAttendance: (data: any) => offlineFirstMutation('attendance', 'create', data, '/attendance', 'POST'),
   
   getTimetable: async () => {
     const userId = useAppStore.getState().user?.id || 'offline-user';
-    const timetable = await db.timetable.where('userId').equals(userId).toArray();
+    let timetable = await db.timetable.where('userId').equals(userId).toArray();
+
+    if (timetable.length === 0 && navigator.onLine && userId !== 'offline-user') {
+      try {
+        const serverData = await fetchWithAuth('/timetable');
+        for (const entry of serverData.timetable || []) {
+          await db.timetable.put({ ...entry, userId });
+        }
+        timetable = await db.timetable.where('userId').equals(userId).toArray();
+      } catch (e) {
+        console.warn('Failed to fetch timetable from server:', e);
+      }
+    }
     return { timetable };
   },
   createTimetableEntry: (data: any) => offlineFirstMutation('timetable', 'create', data, '/timetable', 'POST'),

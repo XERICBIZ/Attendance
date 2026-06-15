@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { createClient } from './supabase';
+import { hydrateFromServer } from './api';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -23,11 +24,19 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      // Hydrate local DB from server when session exists
+      if (session?.user) {
+        hydrateFromServer();
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      // Hydrate when user signs in
+      if (_event === 'SIGNED_IN' && session?.user) {
+        hydrateFromServer();
+      }
     });
 
     // Offline / Online listeners
