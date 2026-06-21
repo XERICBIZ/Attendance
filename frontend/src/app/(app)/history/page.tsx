@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { CalendarDays, ChevronDown, ChevronUp, CheckCircle2, XCircle, Ban, Filter } from 'lucide-react';
+import { useAppStore } from '@/store/useAppStore';
 
 // Group attendance records by date
 function groupByDate(attendance: any[]) {
@@ -29,17 +30,20 @@ const STATUS_CONFIG: Record<string, { color: string; icon: any; label: string }>
 };
 
 export default function HistoryPage() {
+  const user = useAppStore((state) => state.user);
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('All');
 
   const { data: attendanceData, isLoading } = useQuery({
-    queryKey: ['attendance'],
+    queryKey: ['attendance', user?.id],
     queryFn: api.getAttendance,
+    enabled: !!user,
   });
 
   const { data: subjectsData } = useQuery({
-    queryKey: ['subjects'],
+    queryKey: ['subjects', user?.id],
     queryFn: api.getSubjects,
+    enabled: !!user,
   });
 
   const subjects = subjectsData?.subjects || [];

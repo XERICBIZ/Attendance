@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useAppStore } from '@/store/useAppStore';
 import { Calendar, MapPin, User, Plus, X, Settings2, CheckCircle2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -20,12 +21,15 @@ export default function TodaySchedule() {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
 
-  const { data: subjectsData } = useQuery({ queryKey: ['subjects'], queryFn: api.getSubjects });
-  const { data: timetableData } = useQuery({ queryKey: ['timetable'], queryFn: api.getTimetable });
-  const { data: attendanceData } = useQuery({ queryKey: ['attendance'], queryFn: api.getAttendance });
+  const user = useAppStore((state) => state.user);
+  
+  const { data: subjectsData } = useQuery({ queryKey: ['subjects', user?.id], queryFn: api.getSubjects, enabled: !!user });
+  const { data: timetableData } = useQuery({ queryKey: ['timetable', user?.id], queryFn: api.getTimetable, enabled: !!user });
+  const { data: attendanceData } = useQuery({ queryKey: ['attendance', user?.id], queryFn: api.getAttendance, enabled: !!user });
   const { data: overridesData } = useQuery({ 
-    queryKey: ['overrides', todayDateString], 
-    queryFn: () => api.getOverrides(todayDateString) 
+    queryKey: ['overrides', todayDateString, user?.id], 
+    queryFn: () => api.getOverrides(todayDateString),
+    enabled: !!user,
   });
 
   const subjects = subjectsData?.subjects || [];

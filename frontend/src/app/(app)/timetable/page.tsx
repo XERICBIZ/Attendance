@@ -6,20 +6,24 @@ import { api } from '@/lib/api';
 import { motion } from 'framer-motion';
 import { MapPin, User, Calendar as CalendarIcon, Plus, Settings2 } from 'lucide-react';
 import Link from 'next/link';
+import { useAppStore } from '@/store/useAppStore';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function TimetablePage() {
+  const user = useAppStore((state) => state.user);
   const [selectedDay, setSelectedDay] = useState('Monday');
 
   const { data: timetableData, isLoading } = useQuery({
-    queryKey: ['timetable'],
+    queryKey: ['timetable', user?.id],
     queryFn: api.getTimetable,
+    enabled: !!user,
   });
 
   const { data: subjectsData } = useQuery({
-    queryKey: ['subjects'],
+    queryKey: ['subjects', user?.id],
     queryFn: api.getSubjects,
+    enabled: !!user,
   });
 
   const timetable = timetableData?.timetable || [];

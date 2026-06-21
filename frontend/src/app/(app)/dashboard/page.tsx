@@ -14,18 +14,21 @@ export default function DashboardPage() {
   const user = useAppStore((state) => state.user);
   
   const { data: subjectsData } = useQuery({
-    queryKey: ['subjects'],
+    queryKey: ['subjects', user?.id],
     queryFn: api.getSubjects,
+    enabled: !!user,
   });
 
   const { data: attendanceData } = useQuery({
-    queryKey: ['attendance'],
+    queryKey: ['attendance', user?.id],
     queryFn: api.getAttendance,
+    enabled: !!user,
   });
 
   const { data: timetableData } = useQuery({
-    queryKey: ['timetable'],
+    queryKey: ['timetable', user?.id],
     queryFn: api.getTimetable,
+    enabled: !!user,
   });
 
   const todayDateObj = new Date();
@@ -33,8 +36,9 @@ export default function DashboardPage() {
   const todayDateString = todayDateObj.toISOString().split('T')[0];
 
   const { data: overridesData } = useQuery({ 
-    queryKey: ['overrides', todayDateString], 
-    queryFn: () => api.getOverrides(todayDateString) 
+    queryKey: ['overrides', todayDateString, user?.id], 
+    queryFn: () => api.getOverrides(todayDateString),
+    enabled: !!user,
   });
 
   const subjects = subjectsData?.subjects || [];

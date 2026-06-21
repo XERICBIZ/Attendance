@@ -5,11 +5,15 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import Link from 'next/link';
 import { Plus, Book, Trash2 } from 'lucide-react';
+import { useAppStore } from '@/store/useAppStore';
 
 export default function SubjectsPage() {
+  const user = useAppStore((state) => state.user);
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['subjects'],
+    queryKey: ['subjects', user?.id],
     queryFn: api.getSubjects,
+    enabled: !!user,
   });
 
   const subjects = data?.subjects || [];

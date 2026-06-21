@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAppStore } from '@/store/useAppStore';
 
 const timetableSchema = z.object({
   subjectId: z.string().min(1, 'Please select a subject'),
@@ -23,10 +24,12 @@ type TimetableFormValues = z.infer<typeof timetableSchema>;
 export default function ManageTimetablePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const user = useAppStore((state) => state.user);
 
   const { data: subjectsData } = useQuery({
-    queryKey: ['subjects'],
+    queryKey: ['subjects', user?.id],
     queryFn: api.getSubjects,
+    enabled: !!user,
   });
 
   const subjects = subjectsData?.subjects || [];
