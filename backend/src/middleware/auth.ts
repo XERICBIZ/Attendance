@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { prisma } from '../lib/prisma';
+import { User } from '../models/User';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -32,22 +32,22 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       return;
     }
     
-    // Ensure user exists in our Prisma database
-    let dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+    // Ensure user exists in our MongoDB database
+    let dbUser = await User.findById(user.id);
     if (!dbUser) {
       // Auto-create user record in our DB if it doesn't exist yet
-      // This happens on first login after signing up via Supabase
-      dbUser = await prisma.user.create({
-        data: {
-          id: user.id,
-          email: user.email || '',
-          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-        }
+      dbUser = await User.create({
+        _id: user.id,
+        email: user.email || '',
+        name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
       });
+      // Also create default settings
+      const { Settings } = await import('../models/Settings');
+      await Settings.create({ userId: user.id });
     }
 
     req.user = {
-      id: dbUser.id,
+      id: dbUser._id,
       email: dbUser.email,
     };
     

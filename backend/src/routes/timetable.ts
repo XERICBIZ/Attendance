@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
-import { prisma } from '../lib/prisma';
+import { Timetable } from '../models/Timetable';
+import { Subject } from '../models/Subject';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 
@@ -7,7 +8,8 @@ const router = Router();
 router.use(authenticate);
 
 const timetableSchema = z.object({
-  subjectId: z.string().uuid(),
+  id: z.string().optional(),
+  subjectId: z.string(),
   day: z.string(),
   startTime: z.string(),
   endTime: z.string(),
@@ -16,9 +18,10 @@ const timetableSchema = z.object({
 
 router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const timetable = await prisma.timetable.findMany({
-      where: { userId: req.user!.id },
-    });
+    const timetable = await Timetable.find({ userId: req.user!.id }).lean();
+    for (const entry of timetable) {
+       (entry as any).id = (entry as any)._id;
+    }
     res.json({ timetable });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch timetable' });
@@ -29,19 +32,23 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const data = timetableSchema.parse(req.body);
     
-    const subject = await prisma.subject.findUnique({ where: { id: data.subjectId } });
-    if (!subject || subject.userId !== req.user!.id) {
+    const subject = await Subject.findOne({ _id: data.subjectId, userId: req.user!.id });
+    if (!subject) {
       res.status(400).json({ error: 'Invalid subject' });
       return;
     }
 
-    const entry = await prisma.timetable.create({
-      data: {
-        ...(data as any),
-        userId: req.user!.id,
-      },
-    });
-    res.status(201).json({ class: entry });
+    const timetableData: any = {
+      ...data,
+      userId: req.user!.id,
+    };
+    if (data.id) timetableData._id = data.id;
+
+    const entry = await Timetable.create(timetableData);
+    const entryObj = entry.toObject();
+    entryObj.id = entryObj._id;
+
+    res.status(201).json({ class: entryObj });
   } catch (error) {
     res.status(400).json({ error: 'Invalid input' });
   }

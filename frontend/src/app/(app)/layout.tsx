@@ -25,6 +25,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    useAppStore.getState().setUser(null);
+    
+    // Completely clear local database to ensure data isolation between different Gmail accounts
+    const { db } = await import('@/lib/db');
+    await Promise.all([
+      db.subjects.clear(),
+      db.attendance.clear(),
+      db.timetable.clear(),
+      db.mutations.clear(),
+      db.overrides.clear()
+    ]);
+    
     router.push('/login');
   };
 

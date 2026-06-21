@@ -12,12 +12,15 @@ const subjects_1 = __importDefault(require("./routes/subjects"));
 const attendance_1 = __importDefault(require("./routes/attendance"));
 const timetable_1 = __importDefault(require("./routes/timetable"));
 const sync_1 = __importDefault(require("./routes/sync"));
+const db_1 = require("./lib/db");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
 app.use((0, cors_1.default)());
 app.use((0, helmet_1.default)());
 app.use(express_1.default.json());
+// Connect to MongoDB
+(0, db_1.connectDB)();
 // Routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/subjects', subjects_1.default);

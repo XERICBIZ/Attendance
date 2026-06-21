@@ -224,3 +224,18 @@ export async function syncBackground() {
     console.error('Background sync failed:', error);
   }
 }
+
+export async function getAdminUsers(password: string) {
+  const response = await fetch(`${API_URL}/admin/users`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-password': password,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Unauthorized');
+  }
+
+  return response.json();
+}
