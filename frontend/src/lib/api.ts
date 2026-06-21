@@ -83,32 +83,51 @@ export async function hydrateFromServer() {
   if (!navigator.onLine) return;
 
   try {
-    const [subjectsRes, attendanceRes, timetableRes] = await Promise.all([
-      fetchWithAuth('/subjects').catch(() => ({ subjects: [] })),
-      fetchWithAuth('/attendance').catch(() => ({ attendance: [] })),
-      fetchWithAuth('/timetable').catch(() => ({ timetable: [] })),
-    ]);
+    let subjectsRes = null;
+    let attendanceRes = null;
+    let timetableRes = null;
+
+    try {
+      subjectsRes = await fetchWithAuth('/subjects');
+    } catch (e) {
+      console.warn('Hydration: failed to fetch subjects', e);
+    }
+    try {
+      attendanceRes = await fetchWithAuth('/attendance');
+    } catch (e) {
+      console.warn('Hydration: failed to fetch attendance', e);
+    }
+    try {
+      timetableRes = await fetchWithAuth('/timetable');
+    } catch (e) {
+      console.warn('Hydration: failed to fetch timetable', e);
+    }
 
     const userId = useAppStore.getState().user?.id;
     if (!userId) return;
 
-    // Clear old local data for this user and replace with server data
-    const oldSubjects = await db.subjects.where('userId').equals(userId).toArray();
-    await Promise.all(oldSubjects.map(s => db.subjects.delete(s.id)));
-    const oldAttendance = await db.attendance.where('userId').equals(userId).toArray();
-    await Promise.all(oldAttendance.map(a => db.attendance.delete(a.id)));
-    const oldTimetable = await db.timetable.where('userId').equals(userId).toArray();
-    await Promise.all(oldTimetable.map(t => db.timetable.delete(t.id)));
+    if (subjectsRes && Array.isArray(subjectsRes.subjects)) {
+      const oldSubjects = await db.subjects.where('userId').equals(userId).toArray();
+      await Promise.all(oldSubjects.map(s => db.subjects.delete(s.id)));
+      for (const subject of subjectsRes.subjects) {
+        await db.subjects.put({ ...subject, userId });
+      }
+    }
 
-    // Populate Dexie with server data
-    for (const subject of subjectsRes.subjects || []) {
-      await db.subjects.put({ ...subject, userId });
+    if (attendanceRes && Array.isArray(attendanceRes.attendance)) {
+      const oldAttendance = await db.attendance.where('userId').equals(userId).toArray();
+      await Promise.all(oldAttendance.map(a => db.attendance.delete(a.id)));
+      for (const att of attendanceRes.attendance) {
+        await db.attendance.put({ ...att, userId });
+      }
     }
-    for (const att of attendanceRes.attendance || []) {
-      await db.attendance.put({ ...att, userId });
-    }
-    for (const entry of timetableRes.timetable || []) {
-      await db.timetable.put({ ...entry, userId });
+
+    if (timetableRes && Array.isArray(timetableRes.timetable)) {
+      const oldTimetable = await db.timetable.where('userId').equals(userId).toArray();
+      await Promise.all(oldTimetable.map(t => db.timetable.delete(t.id)));
+      for (const entry of timetableRes.timetable) {
+        await db.timetable.put({ ...entry, userId });
+      }
     }
 
     console.log('Hydrated local DB from server');
