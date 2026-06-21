@@ -6,45 +6,51 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Mail, Lock, Loader2, Code, ArrowRight } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
-import { User } from '@supabase/supabase-js';
+import { Mail, Lock, Loader2, User as UserIcon, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
-const loginSchema = z.object({
+const registerSchema = z.object({
+  fullName: z.string().min(2, { message: 'Name must be at least 2 characters' }),
   email: z.string().email({ message: 'Invalid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const supabase = createClient();
   const [error, setError] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const setUser = useAppStore((state) => state.setUser);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: RegisterFormValues) => {
     setError(null);
-    const { data: authData, error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
+      options: {
+        data: {
+          full_name: data.fullName,
+        }
+      }
     });
 
     if (error) {
       setError(error.message);
+    } else if (authData.session === null) {
+      // Supabase requires email confirmation
+      setError('Registration successful! Please check your email to confirm your account before logging in.');
     } else {
-      const hasName = authData.user?.user_metadata?.full_name;
-      router.push(hasName ? '/dashboard' : '/onboarding');
+      // User is logged in immediately (email confirmation is disabled)
+      router.push('/dashboard');
     }
   };
 
@@ -63,34 +69,19 @@ export default function LoginPage() {
     }
   };
 
-  const handleBypass = () => {
-    const mockUser = {
-      id: 'mock-1234-uuid',
-      app_metadata: {},
-      user_metadata: { full_name: '' }, // empty so onboarding triggers
-      aud: 'authenticated',
-      created_at: new Date().toISOString(),
-      email: 'test@student.com',
-    } as User;
-    
-    setUser(mockUser);
-    router.push('/onboarding');
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F7F5EE] p-6 text-[#1a1a1a] relative overflow-hidden">
       {/* Decorative neo-brutalist background shapes */}
-      <div className="absolute -top-20 -left-20 w-64 h-64 bg-neo-yellow border-[3px] border-[#1a1a1a] rounded-full opacity-50 pointer-events-none"></div>
-      <div className="absolute top-40 -right-10 w-32 h-32 bg-neo-blue border-[3px] border-[#1a1a1a] opacity-50 pointer-events-none rotate-12"></div>
-      <div className="absolute -bottom-20 left-1/4 w-80 h-40 bg-neo-red border-[3px] border-[#1a1a1a] rounded-full opacity-50 pointer-events-none -rotate-6"></div>
-
-      <div className="neo-card w-full max-w-md p-8 relative z-10 bg-white">
+      <div className="absolute -top-10 right-10 w-48 h-48 bg-neo-green border-[3px] border-[#1a1a1a] rounded-full opacity-50 pointer-events-none"></div>
+      <div className="absolute bottom-10 -left-10 w-40 h-40 bg-neo-orange border-[3px] border-[#1a1a1a] opacity-50 pointer-events-none -rotate-12"></div>
+      
+      <div className="neo-card w-full max-w-md p-8 relative z-10 bg-white mt-10 mb-10">
         <div className="text-center mb-8">
-          <div className="inline-block bg-neo-yellow border-2 border-[#1a1a1a] px-4 py-1 font-black text-xl mb-4 shadow-[2px_2px_0px_0px_#1a1a1a]">
+          <div className="inline-block bg-neo-blue text-white border-2 border-[#1a1a1a] px-4 py-1 font-black text-xl mb-4 shadow-[2px_2px_0px_0px_#1a1a1a]">
             AttendX
           </div>
-          <h1 className="text-3xl font-black tracking-tight">Welcome back!</h1>
-          <p className="text-gray-600 mt-2 font-medium">Please enter your details to continue.</p>
+          <h1 className="text-3xl font-black tracking-tight">Create Account</h1>
+          <p className="text-gray-600 mt-2 font-medium">Join us and take control of your attendance.</p>
         </div>
 
         {error && (
@@ -112,7 +103,7 @@ export default function LoginPage() {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
           )}
-          Continue with Google
+          Sign up with Google
         </button>
 
         <div className="relative mb-6">
@@ -125,6 +116,20 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <div>
+            <label className="block text-sm font-bold mb-1 ml-1">Full Name</label>
+            <div className="relative">
+              <UserIcon className="absolute left-3 top-3.5 text-gray-500" size={20} />
+              <input
+                {...register('fullName')}
+                type="text"
+                placeholder="John Doe"
+                className="neo-input pl-10"
+              />
+            </div>
+            {errors.fullName && <p className="text-neo-red font-bold text-xs mt-1 ml-1">{errors.fullName.message}</p>}
+          </div>
+
           <div>
             <label className="block text-sm font-bold mb-1 ml-1">Email Address</label>
             <div className="relative">
@@ -156,11 +161,11 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3 bg-neo-blue text-white neo-button flex justify-center items-center gap-2 text-lg mt-2 disabled:opacity-70 disabled:active:translate-y-0 disabled:active:translate-x-0 disabled:active:shadow-[3px_3px_0px_0px_#1a1a1a]"
+            className="w-full py-3 bg-neo-yellow text-[#1a1a1a] neo-button flex justify-center items-center gap-2 text-lg mt-2 disabled:opacity-70 disabled:active:translate-y-0 disabled:active:translate-x-0 disabled:active:shadow-[3px_3px_0px_0px_#1a1a1a]"
           >
             {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : (
               <>
-                Sign In <ArrowRight size={20} strokeWidth={3} />
+                Create Account <ArrowRight size={20} strokeWidth={3} />
               </>
             )}
           </button>
@@ -168,21 +173,12 @@ export default function LoginPage() {
 
         <div className="mt-8 pt-6 border-t-2 border-[#1a1a1a] text-center">
           <p className="text-sm font-medium">
-            Don't have an account?{' '}
-            <Link href="/register" className="font-black text-neo-blue hover:underline">
-              Sign up
+            Already have an account?{' '}
+            <Link href="/login" className="font-black text-neo-red hover:underline">
+              Sign in
             </Link>
           </p>
         </div>
-
-        <button
-          onClick={handleBypass}
-          type="button"
-          className="w-full mt-6 flex items-center justify-center gap-2 bg-neo-yellow text-[#1a1a1a] py-2 border-2 border-[#1a1a1a] rounded-xl font-bold shadow-[2px_2px_0px_0px_#1a1a1a] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all text-xs"
-        >
-          <Code size={16} />
-          Dev Bypass
-        </button>
       </div>
     </div>
   );
